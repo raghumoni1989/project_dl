@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Enter Captcha</title>
+</head>
+<body>
+    <h2>Captcha Verification</h2>
+    <form method="POST" action="/submit">
+        <input type="hidden" name="dl_number" value="{{ dl_number }}">
+        <input type="hidden" name="dob" value="{{ dob }}">
+        <input type="hidden" name="state_path" value="{{ state_path }}">
+
+        <p>DL Number: {{ dl_number }}</p>
+        <p>DOB: {{ dob }}</p>
+
+        <img src="{{ url_for('static', filename=captcha_image) }}" alt="Captcha"><br><br>
+        <label>Enter Captcha:</label>
+        <input type="text" name="captcha" required><br><br>
+
+        <button type="submit">Get DL PDF</button>
+    </form>
+</body>
+</html>

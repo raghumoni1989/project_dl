@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Driving Licence Lookup</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Loader Overlay */
+    #loader-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(255, 255, 255, 0.95);
+      z-index: 9999;
+      text-align: center;
+      padding-top: 18%;
+    }
+
+    .loader {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+    .loader span {
+      width: 15px;
+      height: 15px;
+      background: #007bff;
+      border-radius: 50%;
+      animation: bounce 0.6s infinite alternate;
+    }
+    .loader span:nth-child(2) {
+      animation-delay: 0.2s;
+      background: #28a745;
+    }
+    .loader span:nth-child(3) {
+      animation-delay: 0.4s;
+      background: #ffc107;
+    }
+    @keyframes bounce {
+      to {
+        opacity: 0.3;
+        transform: translateY(-12px);
+      }
+    }
+    .loading-text {
+      margin-top: 15px;
+      font-weight: 500;
+      color: #444;
+      font-size: 16px;
+    }
+
+    .progress {
+      margin: 20px auto 0;
+      width: 60%;
+      height: 8px;
+      border-radius: 5px;
+      overflow: hidden;
+      background: #e9ecef;
+    }
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #007bff, #28a745, #ffc107);
+      transition: width 0.1s linear;
+    }
+  </style>
+</head>
+<body class="bg-light">
+
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow p-4">
+        <h3 class="text-center mb-4">Driving Licence Lookup</h3>
+
+        <form method="POST">
+          <!-- Hidden session id -->
+          <input type="hidden" id="session_id" name="session_id" value="{{ session_id }}">
+
+          <!-- DL Number -->
+          <div class="mb-3">
+            <label for="dl_number" class="form-label">DL Number</label>
+            <input type="text" id="dl_number" name="dl_number" class="form-control" required>
+          </div>
+
+          <!-- DOB -->
+          <div class="mb-3">
+            <label for="dob" class="form-label">Date of Birth (dd-mm-yyyy)</label>
+            <input type="text" id="dob" name="dob" class="form-control" placeholder="dd-mm-yyyy" required>
+          </div>
+
+          <!-- Captcha -->
+          <div class="mb-3 text-center">
+            <img id="captcha-img" src="{{ url_for('static', filename=captcha_image) }}" alt="Captcha" class="border rounded mb-2"><br>
+            <input type="text" id="captcha" name="captcha" class="form-control mt-2" placeholder="Enter captcha" required>
+            
+          </div>
+
+          <!-- Submit -->
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">Get DL Details (PDF)</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loader with Progress Bar -->
+<div id="loader-overlay">
+  <div class="loader">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <p class="loading-text">Fetching DL Details, please wait...</p>
+
+  <div class="progress">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.querySelector("form");
+    const loader = document.getElementById("loader-overlay");
+    const progressBar = document.getElementById("progress-bar");
+
+    form.addEventListener("submit", function () {
+      loader.style.display = "block";
+      progressBar.style.width = "0%";
+
+      let width = 0;
+      const interval = setInterval(() => {
+        width += 0.3;
+        if (width > 100) {
+          width = 100;
+          clearInterval(interval);
+        }
+        progressBar.style.width = width + "%";
+      }, 50);
+    });
+  });
+
+
+</script>
+
+</body>
+</html>

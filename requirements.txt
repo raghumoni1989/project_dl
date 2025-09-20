@@ -1,0 +1,5 @@
+flask
+playwright
+PyMuPDF
+pdfplumber
+mysql-connector-python
