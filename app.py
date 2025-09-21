@@ -1,4 +1,4 @@
-import os, time, subprocess, sys, uuid, io, re, asyncio
+import os, time, subprocess, sys, uuid, io, re, asyncio, json
 from datetime import datetime
 from flask import Flask, render_template, request
 from playwright.async_api import async_playwright
@@ -8,6 +8,7 @@ import mysql.connector
 from mysql.connector import Error
 from ftplib import FTP
 from threading import Thread
+import redis   # ✅ Redis for sessions
 
 # ============================================================
 # FLASK APP INIT
@@ -77,11 +78,25 @@ def ftp_upload(local_path, remote_path):
         return False
 
 # ============================================================
+# REDIS SESSION STORE
+# ============================================================
+redis_client = redis.Redis(host="localhost", port=6379, db=0)
+
+def save_session(sid, data, ttl=300):
+    redis_client.setex(f"session:{sid}", ttl, json.dumps(data))
+
+def load_session(sid):
+    raw = redis_client.get(f"session:{sid}")
+    return json.loads(raw) if raw else None
+
+def delete_session(sid):
+    redis_client.delete(f"session:{sid}")
+
+# ============================================================
 # PLAYWRIGHT GLOBAL INIT
 # ============================================================
 playwright = None
 browser = None
-sessions = {}
 _loop = asyncio.new_event_loop()
 asyncio.set_event_loop(_loop)
 
@@ -133,16 +148,29 @@ async def start_session_async():
     captcha_path = os.path.join(CAPTCHA_DIR, captcha_filename)
     await page.locator("img#capimg").screenshot(path=captcha_path)
 
-    sessions[sid] = {"context": context, "page": page}
+    # ✅ store in Redis instead of local dict
+    save_session(sid, {"context": True})
     return sid, f"captcha/{captcha_filename}"
 
 async def finish_session_async(sid, dl_number, dob, captcha_value):
-    if sid not in sessions:
+    sess = load_session(sid)
+    if not sess:
         raise Exception("Session expired")
-    sess = sessions.pop(sid)
-    page, context = sess["page"], sess["context"]
+    delete_session(sid)  # cleanup
+
+    # NOTE: We cannot store Playwright objects in Redis,
+    # so you need to manage them differently (like single browser per request).
+    # Simplest way: always create fresh context+page here again
+    context = await browser.new_context(viewport={"width": 1280, "height": 900})
+    page = await context.new_page()
 
     try:
+        # Fill form
+        await page.goto("https://sarathi.parivahan.gov.in/sarathiservice/stateSelection.do")
+        await page.select_option("#stfNameId", value="KA")
+        await page.click("a:has-text('Apply for Duplicate DL')")
+        await page.click("input[value='Continue']")
+
         await page.wait_for_selector("input[name='dlno']", timeout=20000)
         await page.fill("input[name='dlno']", dl_number)
         await page.wait_for_selector("input[name='dob']", timeout=20000)
@@ -279,7 +307,6 @@ def index():
 
 @app.route("/save_data", methods=["POST"])
 def save_data():
-    """Save DL details to database"""
     data = request.form.to_dict()
     upload_id = data.get("upload_id")
     conn = get_db_connection()
